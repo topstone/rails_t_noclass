@@ -1,0 +1,41 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+
+require "active_support/core_ext/string/inflections"
+
+if ARGV.length != 2
+  puts "Usage: ruby collection_select.rb <model_name> <association_name>"
+  puts "Example: ruby collection_select.rb exam student"
+  exit 1
+end
+
+model_name = ARGV[0]
+association_name = ARGV[1]
+
+# pluralize を使ってモデル名を複数形に変換
+association_class = association_name.capitalize
+association_name.pluralize
+
+file_path = "./app/views/#{model_name.pluralize}/_form.html.erb"
+
+unless File.exist?(file_path)
+  puts "Error: File not found: #{file_path}"
+  exit 1
+end
+
+content = File.read(file_path)
+
+# text_field を collection_select に置き換え
+old_line = "    <%= form.text_field :#{association_name}_id %>"
+new_line = "    <%= form.collection_select :#{association_name}_id, #{association_class}.all, :id, :name %>"
+
+if content.include?(old_line)
+  content.gsub!(old_line, new_line)
+  File.write(file_path, content)
+  puts "Successfully updated #{file_path}"
+  puts "Changed text_field to collection_select for #{association_name}_id"
+else
+  puts "Error: Could not find the line to replace in #{file_path}"
+  puts "Looking for: #{old_line}"
+  exit 1
+end
