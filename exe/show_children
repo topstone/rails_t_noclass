@@ -1,10 +1,11 @@
 #!/usr/bin/env ruby
+# frozen_string_literal: true
 
 # 使い方: ruby show_children.rb exam student
 # 第1引数: 子モデル名（例: exam）
 # 第2引数: 親モデル名（例: student）
 
-require 'active_support/core_ext/string/inflections'
+require "active_support/core_ext/string/inflections"
 
 if ARGV.length != 2
   puts "Usage: ruby show_children.rb <child_model> <parent_model>"
@@ -18,58 +19,90 @@ parent_model = ARGV[1]
 child_plural = child_model.pluralize
 parent_plural = parent_model.pluralize
 
-file_path = "./app/views/#{parent_plural}/_#{parent_model}.html.erb"
+# ===== View ファイルの更新 (show.html.erb) =====
+view_file_path = "./app/views/#{parent_plural}/show.html.erb"
 
-unless File.exist?(file_path)
-  puts "Error: File not found - #{file_path}"
+unless File.exist?(view_file_path)
+  puts "Error: File not found - #{view_file_path}"
   exit 1
 end
 
 # ファイルの内容を読み込む
-content = File.read(file_path)
+content = File.read(view_file_path)
 
 # 追加するコード
 insert_code = <<~ERB
-  <div id="#{child_plural}">
+  <hr>
+  <div class="#{child_plural}">
     <% @#{child_plural}.each do |#{child_model}| %>
       <%= render #{child_model} %>
       <p>
         <%= link_to "Show this #{child_model}", #{child_model} %>
       </p>
+      <hr>
     <% end %>
   </div>
 ERB
 
-# 最終行の</div>の直前に挿入
-if content =~ /^<\/div>\s*\z/m
-  # 最後の</div>を見つけて、その前に挿入
-  lines = content.lines
-  
-  # 最後から</div>を探す
-  insert_index = lines.rindex { |line| line.strip == '</div>' }
-  
-  if insert_index
-    # インデントを取得（最後の</div>のインデント）
-    indent = lines[insert_index][/^\s*/]
-    
-    # 挿入するコードにインデントを適用
-    indented_insert = insert_code.lines.map { |line| 
-      line.strip.empty? ? line : "#{indent}#{line}"
-    }.join
-    
-    # 挿入
-    lines.insert(insert_index, indented_insert)
-    
-    # ファイルに書き込む
-    File.write(file_path, lines.join)
-    
-    puts "Successfully updated #{file_path}"
-    puts "Added #{child_plural} section before the closing </div>"
+# <%= render @student %> の直後に挿入
+render_line_pattern = /^<%= render @#{parent_model} %>\n/
+
+if content =~ render_line_pattern
+  # 既に追加されているかチェック
+  if content.include?("<div class=\"#{child_plural}\">")
+    puts "✓ View file already has #{child_plural} section"
   else
-    puts "Error: Could not find closing </div> tag"
-    exit 1
+    # <%= render @student %> の直後に挿入
+    updated_content = content.sub(
+      render_line_pattern,
+      "<%= render @#{parent_model} %>\n#{insert_code}"
+    )
+
+    File.write(view_file_path, updated_content)
+    puts "✓ Successfully updated #{view_file_path}"
+    puts "  Added #{child_plural} section after <%= render @#{parent_model} %>"
   end
 else
-  puts "Error: File does not end with </div>"
+  puts "Warning: Could not find '<%= render @#{parent_model} %>' in #{view_file_path}"
   exit 1
 end
+
+# ===== Controller ファイルの更新 =====
+controller_file_path = "./app/controllers/#{parent_plural}_controller.rb"
+
+unless File.exist?(controller_file_path)
+  puts "Error: File not found - #{controller_file_path}"
+  exit 1
+end
+
+controller_content = File.read(controller_file_path)
+
+# show メソッドを探す
+if controller_content =~ %r{(  # GET /#{parent_plural}/\d+ or /#{parent_plural}/\d+\.json\n  def show\n)(  end)}
+  # show メソッドが見つかった場合
+  Regexp.last_match(1)
+  Regexp.last_match(2)
+
+  # 追加する行
+  new_line = "    @#{child_plural} = @#{parent_model}.#{child_plural}\n"
+
+  # 既に追加されているかチェック
+  if controller_content.include?(new_line.strip)
+    puts "✓ Controller already has @#{child_plural} assignment in show method"
+  else
+    # 挿入
+    updated_content = controller_content.sub(
+      %r{(  # GET /#{parent_plural}/\d+ or /#{parent_plural}/\d+\.json\n  def show\n)(  end)},
+      "\\1#{new_line}\\2"
+    )
+
+    File.write(controller_file_path, updated_content)
+    puts "✓ Successfully updated #{controller_file_path}"
+    puts "  Added @#{child_plural} assignment to show method"
+  end
+else
+  puts "Warning: Could not find show method in #{controller_file_path}"
+  puts "  Please manually add: @#{child_plural} = @#{parent_model}.#{child_plural}"
+end
+
+puts "\n✓ All done!"
