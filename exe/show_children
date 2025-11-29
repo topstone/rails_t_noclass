@@ -1,0 +1,75 @@
+#!/usr/bin/env ruby
+
+# 使い方: ruby show_children.rb exam student
+# 第1引数: 子モデル名（例: exam）
+# 第2引数: 親モデル名（例: student）
+
+require 'active_support/core_ext/string/inflections'
+
+if ARGV.length != 2
+  puts "Usage: ruby show_children.rb <child_model> <parent_model>"
+  puts "Example: ruby show_children.rb exam student"
+  exit 1
+end
+
+child_model = ARGV[0]
+parent_model = ARGV[1]
+
+child_plural = child_model.pluralize
+parent_plural = parent_model.pluralize
+
+file_path = "./app/views/#{parent_plural}/_#{parent_model}.html.erb"
+
+unless File.exist?(file_path)
+  puts "Error: File not found - #{file_path}"
+  exit 1
+end
+
+# ファイルの内容を読み込む
+content = File.read(file_path)
+
+# 追加するコード
+insert_code = <<~ERB
+  <div id="#{child_plural}">
+    <% @#{child_plural}.each do |#{child_model}| %>
+      <%= render #{child_model} %>
+      <p>
+        <%= link_to "Show this #{child_model}", #{child_model} %>
+      </p>
+    <% end %>
+  </div>
+ERB
+
+# 最終行の</div>の直前に挿入
+if content =~ /^<\/div>\s*\z/m
+  # 最後の</div>を見つけて、その前に挿入
+  lines = content.lines
+  
+  # 最後から</div>を探す
+  insert_index = lines.rindex { |line| line.strip == '</div>' }
+  
+  if insert_index
+    # インデントを取得（最後の</div>のインデント）
+    indent = lines[insert_index][/^\s*/]
+    
+    # 挿入するコードにインデントを適用
+    indented_insert = insert_code.lines.map { |line| 
+      line.strip.empty? ? line : "#{indent}#{line}"
+    }.join
+    
+    # 挿入
+    lines.insert(insert_index, indented_insert)
+    
+    # ファイルに書き込む
+    File.write(file_path, lines.join)
+    
+    puts "Successfully updated #{file_path}"
+    puts "Added #{child_plural} section before the closing </div>"
+  else
+    puts "Error: Could not find closing </div> tag"
+    exit 1
+  end
+else
+  puts "Error: File does not end with </div>"
+  exit 1
+end
