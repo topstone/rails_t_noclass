@@ -18,7 +18,7 @@ def show_parent(model_name, parent_name)
   # 変更パターンを構築
   # 例: exam.student_id → exam.student.name
   old_pattern = "<%= #{model_name}.#{parent_name}_id %>"
-  new_pattern = "<%= #{model_name}.#{parent_name}.name %>"
+  new_pattern = "<%= link_to #{model_name}.#{parent_name}.name, #{model_name}.#{parent_name} %>"
 
   # 置換を実行
   if content.include?(old_pattern)
