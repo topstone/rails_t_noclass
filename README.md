@@ -6,5 +6,9 @@
 
 ### collection_select
 
-`rails generate scaffold exam student:references` の実行後、 `collection_select exam student` と実行することで exam 編集時に student 一覧から選択できるようになります。。
+`rails generate scaffold exam student:references` の実行後、 `collection_select exam student` と実行することで exam 編集時に student 一覧から選択できるようになります。
+
+### show_parent
+
+`rails generate scaffold exam student:references` の実行後、 `show_parent exam student` と実行することで exam 表示時に student 名称が表示されます。
 

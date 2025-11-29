@@ -1,0 +1,49 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+
+require "active_support/core_ext/string/inflections"
+
+def show_parent(model_name, parent_name)
+  # パーシャルファイルのパスを構築
+  partial_path = "./app/views/#{model_name.pluralize}/_#{model_name}.html.erb"
+
+  unless File.exist?(partial_path)
+    puts "Error: File not found: #{partial_path}"
+    exit 1
+  end
+
+  # ファイルを読み込む
+  content = File.read(partial_path)
+
+  # 変更パターンを構築
+  # 例: exam.student_id → exam.student.name
+  old_pattern = "<%= #{model_name}.#{parent_name}_id %>"
+  new_pattern = "<%= #{model_name}.#{parent_name}.name %>"
+
+  # 置換を実行
+  if content.include?(old_pattern)
+    new_content = content.gsub(old_pattern, new_pattern)
+
+    # ファイルに書き戻す
+    File.write(partial_path, new_content)
+
+    puts "Successfully updated #{partial_path}"
+    puts "Changed: #{old_pattern}"
+    puts "To:      #{new_pattern}"
+  else
+    puts "Warning: Pattern not found in #{partial_path}"
+    puts "Looking for: #{old_pattern}"
+  end
+end
+
+# コマンドライン引数をチェック
+if ARGV.length != 2
+  puts "Usage: ruby show_parent.rb MODEL_NAME PARENT_NAME"
+  puts "Example: ruby show_parent.rb exam student"
+  exit 1
+end
+
+model_name = ARGV[0]
+parent_name = ARGV[1]
+
+show_parent(model_name, parent_name)
