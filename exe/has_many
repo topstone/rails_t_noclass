@@ -1,0 +1,58 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+
+require "active_support/core_ext/string/inflections"
+
+# コマンドライン引数のチェック
+if ARGV.length != 2
+  puts "Usage: ruby has_many.rb <association_name> <model_name>"
+  puts "Example: ruby has_many.rb exam student"
+  exit 1
+end
+
+association_name = ARGV[0]
+model_name = ARGV[1]
+
+# モデルファイルのパス
+model_file = "./app/models/#{model_name}.rb"
+
+# ファイルの存在確認
+unless File.exist?(model_file)
+  puts "Error: Model file not found: #{model_file}"
+  exit 1
+end
+
+# ファイルを読み込む
+content = File.read(model_file)
+
+# クラス名を取得（キャメルケース）
+class_name = model_name.camelize
+
+# has_many の関連名（複数形）
+plural_association = association_name.pluralize
+
+# has_many 行を追加
+has_many_line = "  has_many :#{plural_association}"
+
+# クラス定義の中に has_many を追加
+if content.match(/class #{class_name} < ApplicationRecord\s*\nend/)
+  # 空のクラスの場合
+  new_content = content.sub(
+    /(class #{class_name} < ApplicationRecord)\s*\n(end)/,
+    "\\1\n#{has_many_line}\n\\2"
+  )
+elsif content.match(/class #{class_name} < ApplicationRecord/)
+  # すでに内容があるクラスの場合
+  new_content = content.sub(
+    /(class #{class_name} < ApplicationRecord)\n/,
+    "\\1\n#{has_many_line}\n"
+  )
+else
+  puts "Error: Could not find class definition for #{class_name}"
+  exit 1
+end
+
+# ファイルに書き込む
+File.write(model_file, new_content)
+
+puts "Successfully added 'has_many :#{plural_association}' to #{model_file}"
