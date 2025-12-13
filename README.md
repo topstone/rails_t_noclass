@@ -6,6 +6,10 @@
 
 `transfer_dir aaa bbb` を実行すると、dir "aaa" の内容を dir "bbb" へ移します。GitHub 上で project を作成し fetch した後に `rails new` を実施する場合に役立ちます。
 
+### transfer_dir
+
+`git_add_chmod aaa` を実行すると、aaa を git add した上で実行権限を付与します。aaa の部分は wildcard などの Ruby の filename 記法が使えます。
+
 ## `rails generate` 時点
 
 ### has_many

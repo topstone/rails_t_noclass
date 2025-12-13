@@ -1,0 +1,46 @@
+#!/usr/bin/env ruby
+
+def process_file(file)
+  puts "Processing: #{file}"
+  
+  # git add を実行
+  system("git add #{file}")
+  
+  # chmod +x を設定
+  system("git update-index --add --chmod=+x #{file}")
+end
+
+def process_entry(entry)
+  if File.file?(entry)
+    # ファイルの場合は直接処理
+    process_file(entry)
+  elsif File.directory?(entry)
+    # ディレクトリの場合は再帰的に処理
+    Dir.glob("#{entry}/**/*", File::FNM_DOTMATCH).each do |path|
+      process_file(path) if File.file?(path)
+    end
+  end
+end
+
+# 引数チェック
+if ARGV.empty?
+  puts "Usage: ruby git_add_chmod.rb <file_or_dir_pattern>"
+  exit 1
+end
+
+pattern = ARGV[0]
+
+# ワイルドカードパターンに一致するファイル/ディレクトリを取得
+entries = Dir.glob(pattern)
+
+if entries.empty?
+  puts "No files or directories matching pattern: #{pattern}"
+  exit 1
+end
+
+# 各エントリを処理
+entries.each do |entry|
+  process_entry(entry)
+end
+
+puts "Done!"
