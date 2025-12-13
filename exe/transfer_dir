@@ -1,0 +1,107 @@
+#!/usr/bin/env ruby
+require 'fileutils'
+require 'set'
+
+def transfer_dir(src_dir, dst_dir)
+  # ディレクトリの存在確認
+  unless Dir.exist?(src_dir)
+    puts "エラー: ソースディレクトリ '#{src_dir}' が存在しません"
+    exit 1
+  end
+
+  # 移動先ディレクトリがなければ作成
+  FileUtils.mkdir_p(dst_dir) unless Dir.exist?(dst_dir)
+
+  # ソースディレクトリ内のアイテムを取得
+  items = Dir.entries(src_dir).reject { |entry| entry == '.' || entry == '..' }
+
+  items.each do |item|
+    src_path = File.join(src_dir, item)
+    dst_path = File.join(dst_dir, item)
+
+    # .git ディレクトリはスキップ
+    if item == '.git'
+      puts "スキップ: #{item} (.git ディレクトリ)"
+      next
+    end
+
+    # Gemfile.lock は常にスキップ
+    if item == 'Gemfile.lock'
+      puts "スキップ: #{item} (Gemfile.lock)"
+      next
+    end
+
+    # README.md の処理
+    if item == 'README.md' && File.exist?(dst_path)
+      puts "スキップ: #{item} (移動元・移動先の両方に存在)"
+      next
+    end
+
+    # .gitignore の処理
+    if item == '.gitignore' && File.exist?(dst_path)
+      merge_gitignore(src_path, dst_path)
+      puts "マージ: #{item} (重複行なし)"
+      next
+    end
+
+    # LICENSE の処理（移動元があれば上書き）
+    if item == 'LICENSE'
+      if File.exist?(dst_path)
+        puts "上書き: #{item}"
+        FileUtils.rm(dst_path)
+      end
+      FileUtils.mv(src_path, dst_path)
+      puts "移動: #{item}"
+      next
+    end
+
+    # 通常の移動処理
+    if File.exist?(dst_path)
+      if File.directory?(src_path) && File.directory?(dst_path)
+        # 両方がディレクトリの場合、再帰的に処理
+        puts "ディレクトリをマージ: #{item}"
+        transfer_dir(src_path, dst_path)
+        # 移動元が空になったら削除
+        Dir.rmdir(src_path) if Dir.empty?(src_path)
+      else
+        puts "上書き: #{item}"
+        FileUtils.rm_rf(dst_path)
+        FileUtils.mv(src_path, dst_path)
+      end
+    else
+      puts "移動: #{item}"
+      FileUtils.mv(src_path, dst_path)
+    end
+  end
+end
+
+def merge_gitignore(src_path, dst_path)
+  # 両方のファイルの内容を読み込み
+  src_lines = File.readlines(src_path).map(&:chomp)
+  dst_lines = File.readlines(dst_path).map(&:chomp)
+
+  # 重複を除去してマージ（順序は維持：移動先→移動元の順）
+  merged_lines = dst_lines + (src_lines - dst_lines)
+
+  # 移動先のファイルに書き込み
+  File.write(dst_path, merged_lines.join("\n") + "\n")
+end
+
+# メイン処理
+if ARGV.length != 2
+  puts "使い方: ruby transfer_dir.rb <移動元ディレクトリ> <移動先ディレクトリ>"
+  exit 1
+end
+
+src_dir = ARGV[0]
+dst_dir = ARGV[1]
+
+puts "=== ディレクトリ転送開始 ==="
+puts "移動元: #{src_dir}"
+puts "移動先: #{dst_dir}"
+puts ""
+
+transfer_dir(src_dir, dst_dir)
+
+puts ""
+puts "=== 転送完了 ==="
