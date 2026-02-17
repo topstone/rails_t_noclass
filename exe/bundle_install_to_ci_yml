@@ -3,8 +3,8 @@
 
 CI_YML_PATH = '.github/workflows/ci.yml'
 
-# 追加するステップ
-INSTALL_STEP = <<~YAML
+# 追加するステップ（インデント保持のため<<-を使用）
+INSTALL_STEP = <<-YAML
 
       - name: Install dependencies
         run: bundle install --jobs 4 --retry 3
@@ -65,7 +65,7 @@ def add_install_dependencies_step
   end
   
   # ステップを挿入
-  lines.insert(insertion_index, INSTALL_STEP.strip)
+  lines.insert(insertion_index, INSTALL_STEP)
   
   # ファイルに直接書き込み
   File.write(CI_YML_PATH, lines.join("\n") + "\n")
