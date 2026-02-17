@@ -3,6 +3,7 @@
 
 # .github/workflows/ci.yml を編集するスクリプト
 # db:test:prepare を db:migrate に変更する
+# bin/rails と bundle exec rails の両方に対応
 
 ci_file_path = "./.github/workflows/ci.yml"
 
@@ -17,14 +18,16 @@ original_content = content.dup
 
 # 置換を実行
 # より具体的なパターンから先に処理する
+# キャプチャグループを使って、元のコマンド形式を維持する
 
 # 1. test:system の場合
-content.gsub!(%r{run:\s*bin/rails\s+db:test:prepare\s+test:system},
-              "run: bin/rails db:migrate && bin/rails test:system")
+# (bin/rails|bundle exec rails) をキャプチャして再利用
+content.gsub!(%r{run:\s*((?:bin/rails|bundle\s+exec\s+rails))\s+db:test:prepare\s+test:system},
+              'run: \1 db:migrate && \1 test:system')
 
 # 2. 通常の test の場合
-content.gsub!(%r{run:\s*bin/rails\s+db:test:prepare\s+test(?!:)},
-              "run: bin/rails db:migrate && bin/rails test")
+content.gsub!(%r{run:\s*((?:bin/rails|bundle\s+exec\s+rails))\s+db:test:prepare\s+test(?!:)},
+              'run: \1 db:migrate && \1 test')
 
 # 変更があったかチェック
 if content == original_content
@@ -35,6 +38,6 @@ else
   puts "#{ci_file_path} を更新しました"
   puts ""
   puts "変更内容:"
-  puts "  'run: bin/rails db:test:prepare test:system' → 'run: bin/rails db:migrate && bin/rails test:system'"
-  puts "  'run: bin/rails db:test:prepare test' → 'run: bin/rails db:migrate && bin/rails test'"
+  puts "  'db:test:prepare test:system' → 'db:migrate && [元のコマンド] test:system'"
+  puts "  'db:test:prepare test' → 'db:migrate && [元のコマンド] test'"
 end
