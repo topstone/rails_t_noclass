@@ -1,0 +1,40 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+
+# .github/workflows/ci.yml を編集するスクリプト
+# db:test:prepare を db:migrate に変更する
+
+ci_file_path = "./.github/workflows/ci.yml"
+
+unless File.exist?(ci_file_path)
+  puts "エラー: #{ci_file_path} が見つかりません"
+  exit 1
+end
+
+# ファイルを読み込む
+content = File.read(ci_file_path)
+original_content = content.dup
+
+# 置換を実行
+# より具体的なパターンから先に処理する
+
+# 1. test:system の場合
+content.gsub!(%r{run:\s*bin/rails\s+db:test:prepare\s+test:system},
+              "run: bin/rails db:migrate && bin/rails test:system")
+
+# 2. 通常の test の場合
+content.gsub!(%r{run:\s*bin/rails\s+db:test:prepare\s+test(?!:)},
+              "run: bin/rails db:migrate && bin/rails test")
+
+# 変更があったかチェック
+if content == original_content
+  puts "変更対象の行が見つかりませんでした"
+else
+  # ファイルに書き込む
+  File.write(ci_file_path, content)
+  puts "#{ci_file_path} を更新しました"
+  puts ""
+  puts "変更内容:"
+  puts "  'run: bin/rails db:test:prepare test:system' → 'run: bin/rails db:migrate && bin/rails test:system'"
+  puts "  'run: bin/rails db:test:prepare test' → 'run: bin/rails db:migrate && bin/rails test'"
+end

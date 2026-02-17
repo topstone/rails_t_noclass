@@ -1,11 +1,12 @@
 #!/usr/bin/env ruby
+# frozen_string_literal: true
 
 def process_file(file)
   puts "Processing: #{file}"
-  
+
   # git add を実行
   system("git add #{file}")
-  
+
   # chmod +x を設定
   system("git update-index --add --chmod=+x #{file}")
 end

@@ -1,0 +1,23 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+
+gitignore_path = "./.gitignore"
+
+# .gitignore ファイルが存在しない場合は作成
+File.write(gitignore_path, "") unless File.exist?(gitignore_path)
+
+# .gitignore の内容を読み込む
+content = File.read(gitignore_path)
+
+# /Gemfile.lock が既に存在するかチェック
+if content.include?("/Gemfile.lock")
+  puts ".gitignore already contains /Gemfile.lock"
+else
+  # 末尾に追記
+  File.open(gitignore_path, "a") do |file|
+    file.puts "" # 空行
+    file.puts "# Ignore Gemfile.lock file."
+    file.puts "/Gemfile.lock"
+  end
+  puts "Added /Gemfile.lock to .gitignore"
+end

@@ -1,0 +1,31 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+
+# .github/workflows/ci.yml の中の「run: bin/」を「run: bundle exec 」に変更するスクリプト
+
+CI_FILE_PATH = "./.github/workflows/ci.yml"
+
+unless File.exist?(CI_FILE_PATH)
+  puts "エラー: #{CI_FILE_PATH} が見つかりません"
+  exit 1
+end
+
+# ファイルを読み込む
+content = File.read(CI_FILE_PATH)
+
+# 「run: bin/」で始まる行を「run: bundle exec 」に変更
+# bin/ の後のコマンド部分を抽出して bundle exec の後に配置
+modified_content = content.gsub(%r{^(\s+run:\s+)bin/(.+)$}, '\1bundle exec \2')
+
+# 変更があったかチェック
+if content == modified_content
+  puts "変更対象の行が見つかりませんでした"
+  exit 0
+end
+
+# ファイルに書き戻す
+File.write(CI_FILE_PATH, modified_content)
+
+puts "✓ #{CI_FILE_PATH} を更新しました"
+puts "\n変更内容:"
+puts "  「run: bin/...」→「run: bundle exec ...」"

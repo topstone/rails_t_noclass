@@ -1,16 +1,52 @@
 # 使い方
 
-## `rails new` 時点
+## `rails new` 後
 
 ### transfer_dir
 
-`transfer_dir aaa bbb` を実行すると、dir "aaa" の内容を dir "bbb" へ移します。GitHub 上で project を作成し fetch した後に `rails new` を実施する場合に役立ちます。
+`transfer_dir aaa aaa_` を実行すると、dir "aaa" の内容を dir "aaa_" へ移します。GitHub 上で project を作成し clone した後に `bundle gem` や `rails new` を実施する場合に役立ちます。
 
-### transfer_dir
+1. GitHub 上で repository "aaa" を作成
+2. local PC へ clone
+3. "aaa_" に rename
+4. `bundle gem aaa`
+5. `transfer_dir aaa aaa_`
+6. aaa を削除
+7. aaa_ を aaa に rename
+
+### ignore_gemfile_lock
+
+`ignore_gemfile_lock` を実行すると、.gitignore に /Gemfile.lock 行を追記します。
+
+### shorten_shebang
+
+`shorten_shebang aaa` を実行すると、aaa の1行目が shebang でありなおかつ「ruby.exe」であった場合に「ruby」に置き換えます。aaa の部分は wildcard などの Ruby の filename 記法が使えます。
+
+Rails application であれば `shorten_shebang bin/*` とします。これをしないと GitHub Actions で "Permission denied" となります。
+
+### git_add_chmod
 
 `git_add_chmod aaa` を実行すると、aaa を git add した上で実行権限を付与します。aaa の部分は wildcard などの Ruby の filename 記法が使えます。
 
-## `rails generate` 時点
+Rails application であれば `git_add_chmod bin` とします。これをしないと GitHub Actions で "Permission denied" となります。
+
+なお、この操作を実施した直後に CLI で `git commit` することを推奨します。(MS-Windows 上で GitHub Desktop を使っている場合、気付かぬうちに実行許可属性が消されることがあります。)
+
+### ruby_version_to_ci_yml
+
+`ruby_version_to_ci_yml` を実行すると、.ruby-version の中身を読み込んで .github/workflows/ci.yml に書き込みます。(ci.yml に「ruby-version: file」という行があったら、 version を固定します。)
+
+### bundle_exec_to_ci_yml
+
+`bundle_exec_to_ci_yml` を実行すると、 .github/workflows/ci.yml 内の「run: bin/」を全て bundle exec 形式に変換します。
+
+### db_migrate_to_ci_yml
+
+`db_migrate_to_ci_yml` を実行すると、 .github/workflows/ci.yml 内の test 実施直前に rails db:migrate を実行するようにします。
+
+これをしないと GitHub Actions で "db/schema.rb doesn't exist yet." となります。
+
+## `rails generate` 後
 
 ### has_many
 

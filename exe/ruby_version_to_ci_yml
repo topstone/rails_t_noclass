@@ -1,0 +1,146 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+
+require "yaml"
+
+# .ruby-version からバージョンを読み取る
+def read_ruby_version
+  ruby_version_file = ".ruby-version"
+
+  unless File.exist?(ruby_version_file)
+    puts "エラー: #{ruby_version_file} が見つかりません"
+    exit 1
+  end
+
+  content = File.read(ruby_version_file).strip
+
+  # "ruby-x.y.z" または "x.y.z" の形式に対応
+  if content =~ /^ruby-(.+)$/
+    Regexp.last_match(1)
+  else
+    content
+  end
+end
+
+# CI YAML ファイルを更新
+def update_ci_yml(ruby_version)
+  ci_yml_file = ".github/workflows/ci.yml"
+
+  unless File.exist?(ci_yml_file)
+    puts "エラー: #{ci_yml_file} が見つかりません"
+    exit 1
+  end
+
+  lines = File.readlines(ci_yml_file)
+  modified = false
+  i = 0
+
+  while i < lines.length
+    line = lines[i]
+
+    # "Set up Ruby" ステップを探す
+    if line =~ /^\s*-?\s*name:\s*['"]?Set up Ruby['"]?\s*$/
+      indent = line[/^\s*/]
+      step_indent = indent
+
+      # このステップの範囲を特定
+      i += 1
+      found_with = false
+      found_ruby_version = false
+      with_indent = nil
+      with_line_index = nil
+
+      # このステップ内を走査
+      while i < lines.length
+        current_line = lines[i]
+        current_indent = current_line[/^\s*/]
+
+        # 次のステップやキーに到達したら終了
+        break if current_indent.length <= step_indent.length && current_line =~ /^\s*-?\s*\w+:/
+
+        # "with:" を探す
+        if current_line =~ /^\s*with:\s*$/
+          found_with = true
+          with_indent = current_indent
+          with_line_index = i
+          i += 1
+          next
+        end
+
+        # "with:" セクション内で ruby-version を探す
+        if found_with && current_line =~ /^\s*ruby-version:\s*(.+)$/
+          found_ruby_version = true
+          current_value = Regexp.last_match(1).strip
+
+          # "file" の場合は置き換え
+          if ["file", "'file'", '"file"'].include?(current_value)
+            lines[i] = "#{current_indent}ruby-version: #{ruby_version}\n"
+            modified = true
+            puts "✓ ruby-version: file を ruby-version: #{ruby_version} に変更しました"
+          elsif current_value != ruby_version
+            lines[i] = "#{current_indent}ruby-version: #{ruby_version}\n"
+            modified = true
+            puts "✓ ruby-version: #{current_value} を ruby-version: #{ruby_version} に変更しました"
+          end
+          break
+        end
+
+        i += 1
+      end
+
+      # with: があるが ruby-version: がない場合
+      if found_with && !found_ruby_version && with_line_index
+        # with: の次の行に ruby-version を追加
+        insert_index = with_line_index + 1
+        insert_indent = "#{with_indent}  "
+        lines.insert(insert_index, "#{insert_indent}ruby-version: #{ruby_version}\n")
+        modified = true
+        puts "✓ ruby-version: #{ruby_version} を追加しました"
+        i += 1 # 挿入した行の分を調整
+      # with: も ruby-version: もない場合
+      elsif !found_with
+        # "uses:" 行の次に "with:" と "ruby-version:" を追加
+        # 現在位置から "uses:" 行を探す
+        search_index = i
+        search_index -= 1 while search_index >= 0 && lines[search_index] !~ /^\s*uses:/
+
+        if search_index >= 0
+          uses_indent = lines[search_index][/^\s*/]
+          insert_index = search_index + 1
+          with_indent = uses_indent
+          ruby_version_indent = "#{uses_indent}  "
+
+          lines.insert(insert_index, "#{with_indent}with:\n")
+          lines.insert(insert_index + 1, "#{ruby_version_indent}ruby-version: #{ruby_version}\n")
+          modified = true
+          puts "✓ with: セクションと ruby-version: #{ruby_version} を追加しました"
+          i += 2 # 挿入した行の分を調整
+        end
+      end
+
+      next
+    end
+
+    i += 1
+  end
+
+  if modified
+    File.write(ci_yml_file, lines.join)
+    puts "\n#{ci_yml_file} を更新しました"
+  else
+    puts "\n変更は必要ありませんでした"
+  end
+end
+
+# メイン処理
+begin
+  ruby_version = read_ruby_version
+  puts "Ruby バージョン: #{ruby_version}"
+  puts ""
+
+  update_ci_yml(ruby_version)
+rescue StandardError => e
+  puts "エラー: #{e.message}"
+  puts e.backtrace
+  exit 1
+end

@@ -1,0 +1,67 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+
+# shorten_shebang.rb - Remove .exe from ruby.exe in shebang lines
+
+def process_file(filepath)
+  unless File.exist?(filepath)
+    puts "警告: ファイルが見つかりません - #{filepath}"
+    return
+  end
+
+  unless File.file?(filepath)
+    puts "スキップ: ファイルではありません - #{filepath}"
+    return
+  end
+
+  # .cmd ファイルは処理しない
+  if filepath.downcase.end_with?(".cmd")
+    puts "スキップ: .cmd ファイル - #{filepath}"
+    return
+  end
+
+  # ファイル全体を読み込む
+  lines = File.readlines(filepath)
+
+  if lines.empty?
+    puts "スキップ: 空のファイル - #{filepath}"
+    return
+  end
+
+  first_line = lines[0]
+
+  # shebang かつ ruby.exe で終わるかチェック
+  if first_line.start_with?("#!") && first_line.rstrip.end_with?("ruby.exe")
+    # .exe を削除
+    lines[0] = first_line.sub(/ruby\.exe(\r?\n?)$/, 'ruby\1')
+
+    # ファイルに書き戻す
+    File.write(filepath, lines.join)
+    puts "処理完了: #{filepath}"
+  else
+    puts "スキップ: 条件に合致しません - #{filepath}"
+  end
+rescue StandardError => e
+  puts "エラー: #{filepath} - #{e.message}"
+end
+
+# メイン処理
+if ARGV.empty?
+  puts "使用方法: ruby #{$PROGRAM_NAME} <file_pattern>"
+  puts "例: ruby #{$PROGRAM_NAME} *.rb"
+  puts "例: ruby #{$PROGRAM_NAME} script.rb"
+  exit 1
+end
+
+# ワイルドカードを展開してファイルを処理
+ARGV.each do |pattern|
+  files = Dir.glob(pattern)
+
+  if files.empty?
+    puts "警告: パターンに一致するファイルがありません - #{pattern}"
+  else
+    files.each do |file|
+      process_file(file)
+    end
+  end
+end
