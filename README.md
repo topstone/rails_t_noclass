@@ -46,6 +46,12 @@ Rails application であれば `git_add_chmod bin` とします。これをし�
 
 これをしないと GitHub Actions で "db/schema.rb doesn't exist yet." となります。
 
+### system_test_if_exist
+
+`system_test_if_exist` を実行すると、 .github/workflows/ci.yml 内の system test は test/system が存在する場合に限定します。
+
+これをしないと GitHub Actions で system-test が失敗します。
+
 ## `rails generate` 後
 
 ### has_many

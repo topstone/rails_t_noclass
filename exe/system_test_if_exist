@@ -1,0 +1,29 @@
+# update_ci.rb
+require 'yaml'
+
+# ci.ymlファイルを読み込む
+file_path = '.github/workflows/ci.yml'
+yaml_content = File.read(file_path)
+data = YAML.load(yaml_content)
+
+# system-test ジョブの Run System Tests ステップを条件付きに変更
+system_test_job = data['jobs']['system-test']
+steps = system_test_job['steps']
+
+steps.each do |step|
+  if step['name'] == 'Run System Tests'
+    # 複数行のコマンドに変更
+    step['run'] = <<~BASH.chomp
+      bundle exec rails db:migrate
+      if [ -d "test/system" ] && [ "$(ls -A test/system)" ]; then
+        bundle exec rails test:system
+      fi
+    BASH
+  end
+end
+
+# YAMLとして書き出し
+File.write(file_path, YAML.dump(data))
+
+puts "✅ #{file_path} を更新しました"
+puts "条件付き実行に変更: test/system ディレクトリが存在し、空でない場合のみシステムテストを実行"
