@@ -14,8 +14,15 @@ end
 content = File.read(CI_FILE_PATH)
 
 # 「run: bin/」で始まる行を「run: bundle exec 」に変更
+# ただし bin/importmap の場合は除外
 # bin/ の後のコマンド部分を抽出して bundle exec の後に配置
-modified_content = content.gsub(%r{^(\s+run:\s+)bin/(.+)$}, '\1bundle exec \2')
+modified_content = content.gsub(%r{^(\s+run:\s+)bin/(.+)$}) do |match|
+  if $2.start_with?('importmap')
+    match  # bin/importmap の場合は元のまま
+  else
+    "#{$1}bundle exec #{$2}"
+  end
+end
 
 # 変更があったかチェック
 if content == modified_content
@@ -29,3 +36,4 @@ File.write(CI_FILE_PATH, modified_content)
 puts "✓ #{CI_FILE_PATH} を更新しました"
 puts "\n変更内容:"
 puts "  「run: bin/...」→「run: bundle exec ...」"
+puts "  ※ bin/importmap は除外"
