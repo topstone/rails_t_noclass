@@ -1,29 +1,29 @@
 # update_ci.rb
-require 'yaml'
-
-# ci.ymlファイルを読み込む
 file_path = '.github/workflows/ci.yml'
-yaml_content = File.read(file_path)
-data = YAML.load(yaml_content)
 
-# system-test ジョブの Run System Tests ステップを条件付きに変更
-system_test_job = data['jobs']['system-test']
-steps = system_test_job['steps']
+# ファイルを読み込む
+content = File.read(file_path)
 
-steps.each do |step|
-  if step['name'] == 'Run System Tests'
-    # 複数行のコマンドに変更
-    step['run'] = <<~BASH.chomp
-      bundle exec rails db:migrate
-      if [ -d "test/system" ] && [ "$(ls -A test/system)" ]; then
-        bundle exec rails test:system
-      fi
-    BASH
-  end
+# 置換前のパターン
+old_pattern = <<~PATTERN.chomp
+run: bundle exec rails db:migrate && bundle exec rails test:system
+PATTERN
+
+# 置換後の内容
+new_content = <<~SCRIPT.chomp
+run: |
+          bundle exec rails db:migrate
+          if [ -d "test/system" ] && [ "$(ls -A test/system)" ]; then
+            bundle exec rails test:system
+          fi
+SCRIPT
+
+# 置換実行
+if content.include?(old_pattern)
+  content.gsub!(old_pattern, new_content)
+  File.write(file_path, content)
+  puts "✅ #{file_path} を更新しました"
+  puts "条件付き実行に変更: test/system ディレクトリが存在し、空でない場合のみシステムテストを実行"
+else
+  puts "⚠️  対象のパターンが見つかりませんでした"
 end
-
-# YAMLとして書き出し
-File.write(file_path, YAML.dump(data))
-
-puts "✅ #{file_path} を更新しました"
-puts "条件付き実行に変更: test/system ディレクトリが存在し、空でない場合のみシステムテストを実行"
