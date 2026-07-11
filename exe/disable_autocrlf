@@ -22,11 +22,37 @@ puts "----"
 puts content
 puts "----"
 
+# .standard.yml に Layout/EndOfLine を無効化する設定を追記する
+# (LFで統一する方針のため、CRLFを要求するこのcopは無効化する)
+standard_yml = ".standard.yml"
+if File.exist?(standard_yml)
+  require "yaml"
+  yaml = YAML.load_file(standard_yml) || {}
+  yaml["ignore"] ||= []
+ 
+  entry = yaml["ignore"].find { |e| e.is_a?(Hash) && e.key?("**/*") }
+  if entry
+    entry["**/*"] ||= []
+    entry["**/*"] << "Layout/EndOfLine" unless entry["**/*"].include?("Layout/EndOfLine")
+  else
+    yaml["ignore"] << {"**/*" => ["Layout/EndOfLine"]}
+  end
+ 
+  File.binwrite(standard_yml, yaml.to_yaml)
+  puts "#{standard_yml} に Layout/EndOfLine の無効化設定を追加しました。"
+else
+  puts "#{standard_yml} が見つからないため、この設定の追記はスキップしました。"
+end
+
 def run(cmd)
   puts "$ #{cmd}"
   system(cmd)
   puts
 end
+
+run("git add #{path}")
+
+run("git config core.autocrlf false")
 
 run("git add --renormalize .")
 run("git status")
@@ -39,3 +65,6 @@ if $?.success?
 else
   run('git commit -m "Normalize line endings to LF"')
 end
+
+run("git rm -r --cached .")
+run("git checkout HEAD -- .")
