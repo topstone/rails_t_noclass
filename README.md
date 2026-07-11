@@ -1,6 +1,10 @@
 # 使い方
 
-## `rails new` 後
+## Ruby, Ruby on Rails 共通
+
+Ruby では `bundle gem --exe --test=rspec --ci=github --linter=standard ____` などの後に実施
+
+Ruby on Rails では `rails new` 後に実施
 
 ### transfer_dir
 
@@ -13,6 +17,10 @@
 5. `transfer_dir aaa aaa_`
 6. aaa を削除
 7. aaa_ を aaa に rename
+
+### disable_autocrlf
+
+`disable_autocrlf` を実行すると、`git config core.autocrlf false` を実行します。
 
 ### ignore_gemfile_lock
 
@@ -39,6 +47,8 @@ Rails application であれば `git_add_chmod bin` とします。これをし�
 ### bundle_exec_to_ci_yml
 
 `bundle_exec_to_ci_yml` を実行すると、 .github/workflows/ci.yml 内の「run: bin/」を全て bundle exec 形式に変換します。
+
+## `rails new` 後
 
 ### db_migrate_to_ci_yml
 
