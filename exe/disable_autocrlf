@@ -1,4 +1,41 @@
 #!/usr/bin/env ruby
-# frozen_string_literal: true
+# .gitattributes を作成し、改行コードをLFに統一する設定を書き込む
+# 実行場所: リポジトリのルート(.gitと同じ階層)で実行してください
 
-`git config core.autocrlf false`
+path = ".gitattributes"
+content = "* text=auto eol=lf\n"
+
+if File.exist?(path)
+  puts "既に #{path} が存在します。上書きしますか? (y/N)"
+  answer = $stdin.gets&.strip&.downcase
+  unless answer == "y"
+    puts "中止しました。"
+    exit
+  end
+end
+
+# バイナリ書き込みでLF固定(Windows上でRubyがCRLFに変換しないように)
+File.binwrite(path, content)
+
+puts "#{path} を作成しました:"
+puts "----"
+puts content
+puts "----"
+
+def run(cmd)
+  puts "$ #{cmd}"
+  system(cmd)
+  puts
+end
+
+run("git add --renormalize .")
+run("git status")
+
+# ステージされた変更があるかどうかを確認してからcommitする
+# (git diff --cached --quiet は差分なしの場合 exit code 0、差分ありなら1)
+system("git diff --cached --quiet")
+if $?.success?
+  puts "変更がないため commit はスキップしました。"
+else
+  run('git commit -m "Normalize line endings to LF"')
+end
