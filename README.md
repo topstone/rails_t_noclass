@@ -26,6 +26,12 @@ Ruby on Rails では `rails new` 後に実施
 
 `ignore_gemfile_lock` を実行すると、.gitignore に /Gemfile.lock 行を追記します。
 
+### comment_out_gemspec
+
+`comment_out_gemspec` を実行すると、.gemspec 内で build に不要な行を comment out します。
+
+`comment_out_gemspec "現在時刻を表示します。"` を実行すると、上記処理に加え、 .gemspec 内の SUMMARY 行に「現在時刻を表示します。」と設定します。
+
 ### shorten_shebang
 
 `shorten_shebang aaa` を実行すると、aaa の1行目が shebang でありなおかつ「ruby.exe」であった場合に「ruby」に置き換えます。aaa の部分は wildcard などの Ruby の filename 記法が使えます。
