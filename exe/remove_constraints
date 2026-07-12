@@ -1,0 +1,117 @@
+# frozen_string_literal: true
+#
+# remove_constraints.rb
+#
+# Gemfile 内の gem 宣言からバージョン制約 (例: "~> 1.3", ">= 2.0" など) を
+# 取り除き、gem 名とその他のオプション (require:, group: など) はそのまま残します。
+#
+# 使い方 (Windows 11 のコマンドプロンプト / PowerShell):
+#   ruby remove_constraints.rb Gemfile
+#   ruby remove_constraints.rb Gemfile Gemfile.new   # 別ファイルに出力したい場合
+#
+# 引数を1つだけ指定した場合は、そのファイルを直接上書きします
+# (念のため同じフォルダに .bak というバックアップを作成します)。
+
+# バージョン制約らしき文字列かどうかを判定する
+# 例: "~> 1.3", ">= 1.0", "<= 2.0", "1.2.3", "= 1.0", "< 2", "> 1"
+VERSION_CONSTRAINT = /\A\s*(~>|>=|<=|==|=|<|>)?\s*\d+(\.\d+)*(\.[a-zA-Z0-9]+)*\s*\z/
+
+# 文字列リテラル ( "..." または '...' ) を1つ読み取り、値と読み取り後の残り文字列を返す
+def scan_string_literal(str)
+  return nil unless str =~ /\A\s*(["'])/
+
+  quote = Regexp.last_match(1)
+  rest = str[Regexp.last_match(0).length..]
+  buf = +""
+  rest.each_char.with_index do |ch, i|
+    if ch == quote
+      return [buf, rest[(i + 1)..]]
+    else
+      buf << ch
+    end
+  end
+  nil # 閉じクォートが見つからなかった
+end
+
+# gem "name", "constraint1", "constraint2", option: value ... という引数部分を解析し、
+# バージョン制約の引数だけを取り除いた文字列を返す
+def strip_constraints(args_str)
+  remaining = args_str
+  kept_parts = []
+  first = true
+
+  loop do
+    remaining = remaining.sub(/\A\s*/, "")
+    break if remaining.empty?
+
+    if remaining =~ /\A["']/
+      # 文字列リテラル引数 (gem名 or バージョン制約)
+      value, rest = scan_string_literal(remaining)
+      if value.nil?
+        # 読み取れなかった場合は残りをそのまま保持して終了
+        kept_parts << remaining
+        break
+      end
+
+      if first
+        # 最初の引数は gem 名なので必ず残す
+        kept_parts << value.inspect.sub(/\A"/, "\"").sub(/"\z/, "\"") # 元のクォート文字は正規化
+        remaining = rest
+      elsif value.match?(VERSION_CONSTRAINT)
+        # バージョン制約なので削除 (カンマも読み飛ばす)
+        remaining = rest.sub(/\A\s*,/, "")
+      else
+        kept_parts << "\"#{value}\""
+        remaining = rest
+      end
+    else
+      # option: value, require: false などのキーワード引数以降はまとめて残す
+      kept_parts << remaining.strip
+      remaining = ""
+    end
+
+    first = false
+    remaining = remaining.sub(/\A\s*,\s*/, "") unless remaining.empty?
+  end
+
+  kept_parts.join(", ")
+end
+
+def process_line(line)
+  # gem "name", ... の行にマッチ (先頭のインデントは保持)
+  m = line.match(/\A(\s*gem\s+)(.*?)(\s*)(#.*)?\z/)
+  return line unless m
+
+  indent, args_str, trailing_space, comment = m.values_at(1, 2, 3, 4)
+  new_args = strip_constraints(args_str)
+  "#{indent}#{new_args}#{comment ? " #{comment}" : ""}\n"
+end
+
+def main
+  input_path = ARGV[0]
+  output_path = ARGV[1] || input_path
+
+  if input_path.nil?
+    warn "使い方: ruby remove_constraints.rb Gemfile [出力先ファイル]"
+    exit 1
+  end
+
+  unless File.exist?(input_path)
+    warn "ファイルが見つかりません: #{input_path}"
+    exit 1
+  end
+
+  lines = File.readlines(input_path)
+  new_lines = lines.map { |line| process_line(line) }
+
+  if output_path == input_path
+    backup_path = "#{input_path}.bak"
+    File.write(backup_path, lines.join)
+    warn "バックアップを作成しました: #{backup_path}"
+  end
+
+  File.write(output_path, new_lines.join)
+  warn "完了しました: #{output_path}"
+end
+
+main if __FILE__ == $PROGRAM_NAME
