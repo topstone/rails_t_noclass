@@ -46,6 +46,19 @@ Rails application であれば `git_add_chmod bin` とします。これをし�
 
 なお、この操作を実施した直後に CLI で `git commit` することを推奨します。(MS-Windows 上で GitHub Desktop を使っている場合、気付かぬうちに実行許可属性が消されることがあります。)
 
+### set_ruby_version
+
+`set_ruby_version 4.0.5` を実行すると、既存 files (後述) に対して、「4.0.5」または「4.0」を設定します。
+
+`set_ruby_version` を実行すると、既存 files (後述) に対して、.ruby-version の内容を元に ruby version を設定します。
+
+#### 対象の files
+
+* .rubocop.yml
+* .ruby-version
+* .standard.yml
+* Dockerfile
+* *.gemspec
 ### ruby_version_to_ci_yml
 
 `ruby_version_to_ci_yml` を実行すると、.ruby-version の中身を読み込んで .github/workflows/ci.yml に書き込みます。(ci.yml に「ruby-version: file」という行があったら、 version を固定します。)
