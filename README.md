@@ -32,19 +32,13 @@ Ruby on Rails では `rails new` 後に実施
 
 `comment_out_gemspec "現在時刻を表示します。"` を実行すると、上記処理に加え、 .gemspec 内の SUMMARY 行に「現在時刻を表示します。」と設定します。
 
-### shorten_shebang
-
-`shorten_shebang aaa` を実行すると、aaa の1行目が shebang でありなおかつ「ruby.exe」であった場合に「ruby」に置き換えます。aaa の部分は wildcard などの Ruby の filename 記法が使えます。
-
-Rails application であれば `shorten_shebang bin/*` とします。これをしないと GitHub Actions で "Permission denied" となります。
-
 ### git_add_chmod
 
 `git_add_chmod aaa` を実行すると、aaa を git add した上で実行権限を付与します。aaa の部分は wildcard などの Ruby の filename 記法が使えます。
 
 Rails application であれば `git_add_chmod bin` とします。これをしないと GitHub Actions で "Permission denied" となります。
 
-なお、この操作を実施した直後に CLI で `git commit` することを推奨します。(MS-Windows 上で GitHub Desktop を使っている場合、気付かぬうちに実行許可属性が消されることがあります。)
+なお、この操作を実施した直後に CLI で `git commit -m "chmod"` などとすることを推奨します。(MS-Windows 上で GitHub Desktop を使っている場合、気付かぬうちに実行許可属性が消されることがあります。)
 
 ### set_ruby_version
 
@@ -59,6 +53,9 @@ Rails application であれば `git_add_chmod bin` とします。これをし�
 * .standard.yml
 * Dockerfile
 * *.gemspec
+
+## rails のみ
+
 ### ruby_version_to_ci_yml
 
 `ruby_version_to_ci_yml` を実行すると、.ruby-version の中身を読み込んで .github/workflows/ci.yml に書き込みます。(ci.yml に「ruby-version: file」という行があったら、 version を固定します。)
@@ -66,6 +63,12 @@ Rails application であれば `git_add_chmod bin` とします。これをし�
 ### bundle_exec_to_ci_yml
 
 `bundle_exec_to_ci_yml` を実行すると、 .github/workflows/ci.yml 内の「run: bin/」を全て bundle exec 形式に変換します。
+
+### shorten_shebang
+
+`shorten_shebang aaa` を実行すると、aaa の1行目が shebang でありなおかつ「ruby.exe」であった場合に「ruby」に置き換えます。aaa の部分は wildcard などの Ruby の filename 記法が使えます。
+
+Rails application であれば `shorten_shebang bin/*` とします。これをしないと GitHub Actions で "Permission denied" となります。
 
 ## `rails new` 後
 
