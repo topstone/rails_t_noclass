@@ -2,15 +2,15 @@
 #
 # remove_constraints.rb
 #
-# Gemfile 内の gem 宣言からバージョン制約 (例: "~> 1.3", ">= 2.0" など) を
-# 取り除き、gem 名とその他のオプション (require:, group: など) はそのまま残します。
+# カレントディレクトリの ./Gemfile 内の gem 宣言からバージョン制約
+# (例: "~> 1.3", ">= 2.0" など) を取り除き、gem 名とその他のオプション
+# (require:, group: など) はそのまま残します。
 #
 # 使い方 (Windows 11 のコマンドプロンプト / PowerShell):
-#   ruby remove_constraints.rb Gemfile
-#   ruby remove_constraints.rb Gemfile Gemfile.new   # 別ファイルに出力したい場合
+#   ruby remove_constraints.rb
 #
-# 引数を1つだけ指定した場合は、そのファイルを直接上書きします
-# (念のため同じフォルダに .bak というバックアップを作成します)。
+# 引数は不要です。実行したディレクトリ直下の Gemfile を直接上書きします
+# (バックアップファイルは作成しません)。
 
 # バージョン制約らしき文字列かどうかを判定する
 # 例: "~> 1.3", ">= 1.0", "<= 2.0", "1.2.3", "= 1.0", "< 2", "> 1"
@@ -88,30 +88,18 @@ def process_line(line)
 end
 
 def main
-  input_path = ARGV[0]
-  output_path = ARGV[1] || input_path
+  path = "./Gemfile"
 
-  if input_path.nil?
-    warn "使い方: ruby remove_constraints.rb Gemfile [出力先ファイル]"
+  unless File.exist?(path)
+    warn "ファイルが見つかりません: #{path}"
     exit 1
   end
 
-  unless File.exist?(input_path)
-    warn "ファイルが見つかりません: #{input_path}"
-    exit 1
-  end
-
-  lines = File.readlines(input_path)
+  lines = File.readlines(path)
   new_lines = lines.map { |line| process_line(line) }
 
-  if output_path == input_path
-    backup_path = "#{input_path}.bak"
-    File.write(backup_path, lines.join)
-    warn "バックアップを作成しました: #{backup_path}"
-  end
-
-  File.write(output_path, new_lines.join)
-  warn "完了しました: #{output_path}"
+  File.write(path, new_lines.join)
+  warn "完了しました: #{path}"
 end
 
 main if __FILE__ == $PROGRAM_NAME
