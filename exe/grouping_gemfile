@@ -1,0 +1,163 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+
+# ./exe/grouping_gemfile
+#
+# ./Gemfile 内の特定の gem を group ブロックにまとめて整理するスクリプト。
+# 引数なしで実行すると ./Gemfile を直接書き換える。
+#
+#   $ ruby exe/grouping_gemfile
+#   もしくは (実行権限を付けて)
+#   $ ./exe/grouping_gemfile
+#
+# 【制限事項】
+# - 対応するのは `gem "name", ...` の1行完結の記述のみ。
+#   複数行にまたがる gem 宣言 (ヒアドキュメント等) には対応していない。
+# - gem 行の直上にあるコメント行は一緒には移動しない。
+# - 既存の group ブロックの中身が全部移動して空になった場合は、
+#   そのブロックごと削除する。
+
+GEMFILE_PATH = File.expand_path("./Gemfile", Dir.pwd)
+
+# ---------------------------------------------------------------------------
+# 対象 gem 一覧 (このスクリプトを後から編集する際はここだけ触ればよい)
+# ---------------------------------------------------------------------------
+DEVELOPMENT_TEST_GEMS = %w[
+  irb
+  rake
+  rubocop
+  standard
+  rspec
+  debug
+  bundler-audit
+  brakeman
+  rubocop-rails
+  rubocop-rails-omakase
+  rubocop-rspec
+].freeze
+
+DEVELOPMENT_GEMS = %w[
+  web-console
+].freeze
+
+TEST_GEMS = %w[
+  capybara
+  selenium-webdriver
+].freeze
+
+# header: 生成する group ブロックの見出し
+# gems  : そのブロックにまとめる対象 gem 名 (上の定数を参照)
+GROUP_DEFINITIONS = [
+  { header: "group :development, :test do", gems: DEVELOPMENT_TEST_GEMS },
+  { header: "group :development do",        gems: DEVELOPMENT_GEMS },
+  { header: "group :test do",                gems: TEST_GEMS }
+].freeze
+
+# group :development, :test 内で、アプリ実行時に require させる必要のない
+# (= CLI・rake タスクとしてのみ使う) gem。ここに含まれるものは
+# `require: false` を自動的に付与する。
+# 既に `require:` オプションが指定されている gem 行はそのまま尊重する。
+REQUIRE_FALSE_GEMS = %w[
+  rake
+  rubocop
+  standard
+  bundler-audit
+  brakeman
+  rubocop-rails
+  rubocop-rails-omakase
+  rubocop-rspec
+].freeze
+# ---------------------------------------------------------------------------
+
+unless File.exist?(GEMFILE_PATH)
+  warn "Gemfile が見つかりません: #{GEMFILE_PATH}"
+  exit 1
+end
+
+# gem "name" もしくは gem 'name' の行にマッチ (バージョン指定・オプション有無を問わない)
+GEM_LINE_REGEX = /\A\s*gem\s+["']([^"']+)["']/.freeze
+
+# 既に空になった group ブロックを丸ごと取り除く
+def remove_empty_group_blocks(lines)
+  result = []
+  i = 0
+
+  while i < lines.length
+    line = lines[i]
+
+    if line =~ /\A\s*group\s+.*\bdo\s*\z/
+      block_end = i + 1
+      block_end += 1 while block_end < lines.length && lines[block_end] !~ /\A\s*end\s*\z/
+      inner = lines[(i + 1)...block_end]
+
+      if inner.all? { |l| l.strip.empty? }
+        # 中身が空 → group ~ end ごとスキップ
+        i = block_end + 1
+        next
+      else
+        result.concat(lines[i..block_end])
+        i = block_end + 1
+        next
+      end
+    else
+      result << line
+      i += 1
+    end
+  end
+
+  result
+end
+
+original_content = File.read(GEMFILE_PATH)
+lines = original_content.each_line.to_a
+
+target_gem_names = GROUP_DEFINITIONS.flat_map { |definition| definition[:gems] }
+
+extracted_lines = {} # gem 名 => 抽出した行 (前後の空白を除去済み)
+remaining_lines = []
+
+lines.each do |line|
+  match = GEM_LINE_REGEX.match(line)
+
+  if match && target_gem_names.include?(match[1])
+    extracted_lines[match[1]] = line.strip
+  else
+    remaining_lines << line
+  end
+end
+
+remaining_lines = remove_empty_group_blocks(remaining_lines)
+
+# 末尾の余分な空行を削る
+remaining_lines.pop while remaining_lines.last&.strip == ""
+
+new_content = remaining_lines.join
+new_content += "\n" unless new_content.end_with?("\n")
+
+GROUP_DEFINITIONS.each do |definition|
+  block_lines = definition[:gems].filter_map do |name|
+    gem_line = extracted_lines[name]
+    next unless gem_line
+
+    if REQUIRE_FALSE_GEMS.include?(name) && !gem_line.include?("require:")
+      gem_line += ", require: false"
+    end
+
+    gem_line
+  end
+
+  next if block_lines.empty?
+
+  new_content += "\n#{definition[:header]}\n"
+  block_lines.each { |gem_line| new_content += "  #{gem_line}\n" }
+  new_content += "end\n"
+end
+
+File.write(GEMFILE_PATH, new_content)
+
+found_gems = extracted_lines.keys
+missing_gems = target_gem_names - found_gems
+
+puts "Gemfile を更新しました: #{GEMFILE_PATH}"
+puts "グループ化した gem: #{found_gems.join(', ')}" unless found_gems.empty?
+puts "見つからなかった gem: #{missing_gems.join(', ')}" unless missing_gems.empty?

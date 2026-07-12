@@ -54,6 +54,14 @@ Rails application であれば `git_add_chmod bin` とします。これをし�
 * Dockerfile
 * *.gemspec
 
+### remove_constraints
+
+`remove_constraints` を実行すると、Gemfile の中の「gem "rake", "~> 13.0"」のような行から version 指定を除去します。副作用が大きいので、実行前に、本当に除去してよいかどうか検討してください。
+
+### grouping_gemfile
+
+`grouping_gemfile` を実行すると、Gemfile の中のうちいくつかの gems を development group, test group に分類します。
+
 ## rails のみ
 
 ### ruby_version_to_ci_yml

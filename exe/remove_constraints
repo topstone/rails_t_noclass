@@ -1,13 +1,14 @@
+#!/usr/bin/env ruby
 # frozen_string_literal: true
-#
-# remove_constraints.rb
+
+# remove_constraints
 #
 # カレントディレクトリの ./Gemfile 内の gem 宣言からバージョン制約
 # (例: "~> 1.3", ">= 2.0" など) を取り除き、gem 名とその他のオプション
 # (require:, group: など) はそのまま残します。
 #
-# 使い方 (Windows 11 のコマンドプロンプト / PowerShell):
-#   ruby remove_constraints.rb
+# gem として install した場合の使い方:
+#   remove_constraints
 #
 # 引数は不要です。実行したディレクトリ直下の Gemfile を直接上書きします
 # (バックアップファイルは作成しません)。
@@ -55,7 +56,7 @@ def strip_constraints(args_str)
 
       if first
         # 最初の引数は gem 名なので必ず残す
-        kept_parts << value.inspect.sub(/\A"/, "\"").sub(/"\z/, "\"") # 元のクォート文字は正規化
+        kept_parts << "\"#{value}\""
         remaining = rest
       elsif value.match?(VERSION_CONSTRAINT)
         # バージョン制約なので削除 (カンマも読み飛ばす)
@@ -82,7 +83,7 @@ def process_line(line)
   m = line.match(/\A(\s*gem\s+)(.*?)(\s*)(#.*)?\z/)
   return line unless m
 
-  indent, args_str, trailing_space, comment = m.values_at(1, 2, 3, 4)
+  indent, args_str, _trailing_space, comment = m.values_at(1, 2, 3, 4)
   new_args = strip_constraints(args_str)
   "#{indent}#{new_args}#{comment ? " #{comment}" : ""}\n"
 end
@@ -102,4 +103,4 @@ def main
   warn "完了しました: #{path}"
 end
 
-main if __FILE__ == $PROGRAM_NAME
+main
